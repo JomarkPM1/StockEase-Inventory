@@ -2,15 +2,21 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
+<<<<<<< HEAD
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
+=======
+  "main": "index.js",
+  "scripts": {
+>>>>>>> 6bb454d241aea38e1212c46af7f527310556f3e8
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+<<<<<<< HEAD
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -19,5 +25,10 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
+=======
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mysql": "^2.18.1"
+>>>>>>> 6bb454d241aea38e1212c46af7f527310556f3e8
   }
 }
