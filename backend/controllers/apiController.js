@@ -1,184 +1,194 @@
-// backend/controllers/apiController.js
-
 const pool = require('../db');
 const bcrypt = require('bcrypt');
 
-// ===== READ: categories =====
+// READ categories
 const getCategories = (req, res) => {
-  pool.query('SELECT * FROM categories')
-    .then(([results]) => res.json(results))
-    .catch(error => res.status(500).json({ error }));
+  pool.query('SELECT * FROM categories', (error, results) => {
+    if (error) return res.status(500).json({ error });
+    res.json(results);
+  });
 };
 
-// ===== READ: products (all) =====
-const getProducts = (req, res) => {
-  pool.query('SELECT * FROM products')
-    .then(([results]) => res.json(results))
-    .catch(error => res.status(500).json({ error }));
+// READ single category by ID
+const getCategoryById = (req, res) => {
+  const id = req.params.id;
+  pool.query('SELECT * FROM categories WHERE category_id = ?', [id], (error, results) => {
+    if (error) return res.status(500).json({ error });
+    if (results.length === 0) return res.status(404).json({ message: 'Category not found' });
+    res.json(results[0]);
+  });
 };
 
-// ===== READ: single product by ID =====
-const getProductById = (req, res) => {
-    const { id } = req.params; 
-
-    pool.query('SELECT * FROM products WHERE product_id = ?', [id])
-        .then(([results]) => {
-            if (results.length === 0) {
-                return res.status(404).json({ message: 'Product not found' });
-            }
-            res.json(results[0]); 
-        })
-        .catch(error => res.status(500).json({ error }));
-};
-
-// ===== READ: users (without passwords) =====
-const getUsers = (req, res) => {
+// CREATE category
+const createCategory = (req, res) => {
+  const { category_name, description } = req.body;
+  if (!category_name) return res.status(400).json({ message: 'Category name is required.' });
   pool.query(
-    'SELECT user_id, username, email, created_at FROM users'
-  )
-    .then(([results]) => res.json(results))
-    .catch(error => res.status(500).json({ error }));
+    'INSERT INTO categories (category_name, description) VALUES (?, ?)',
+    [category_name, description],
+    (error, result) => {
+      if (error) return res.status(500).json({ error });
+      res.status(201).json({ message: 'Category created successfully', category_id: result.insertId });
+    }
+  );
 };
 
-// ===== CREATE: user (Registration) =====
+// UPDATE category
+const updateCategory = (req, res) => {
+  const id = req.params.id;
+  const { category_name, description } = req.body;
+  pool.query(
+    'UPDATE categories SET category_name = ?, description = ? WHERE category_id = ?',
+    [category_name, description, id],
+    (error, result) => {
+      if (error) return res.status(500).json({ error });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'Category not found' });
+      res.json({ message: 'Category updated successfully' });
+    }
+  );
+};
+
+// DELETE category
+const deleteCategory = (req, res) => {
+  const id = req.params.id;
+  pool.query('DELETE FROM categories WHERE category_id = ?', [id], (error, result) => {
+    if (error) return res.status(500).json({ error });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Category not found' });
+    res.json({ message: 'Category deleted successfully' });
+  });
+};
+
+// READ products all
+const getProducts = (req, res) => {
+  pool.query('SELECT * FROM products', (error, results) => {
+    if (error) return res.status(500).json({ error });
+    res.json(results);
+  });
+};
+
+// READ single product by ID
+const getProductById = (req, res) => {
+  const id = req.params.id;
+  pool.query('SELECT * FROM products WHERE product_id = ?', [id], (error, results) => {
+    if (error) return res.status(500).json({ error });
+    if (results.length === 0) return res.status(404).json({ message: 'Product not found' });
+    res.json(results[0]);
+  });
+};
+
+// READ users without passwords
+const getUsers = (req, res) => {
+  pool.query('SELECT user_id, username, email, created_at FROM users', (error, results) => {
+    if (error) return res.status(500).json({ error });
+    res.json(results);
+  });
+};
+
+// READ single user by ID
+const getUserById = (req, res) => {
+  const id = req.params.id;
+  pool.query('SELECT user_id, username, email, created_at FROM users WHERE user_id = ?', [id], (error, results) => {
+    if (error) return res.status(500).json({ error });
+    if (results.length === 0) return res.status(404).json({ message: 'User not found' });
+    res.json(results[0]);
+  });
+};
+
+// CREATE user (Registration)
 const registerUser = async (req, res) => {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-        return res.status(400).json({ message: 'All fields are required.' });
-    }
-
-    try {
-        // 1. Check if user already exists
-        const [existingUser] = await pool.query('SELECT user_id FROM users WHERE email = ?', [email]);
-        if (existingUser.length > 0) {
-            return res.status(409).json({ message: 'User with this email already exists.' });
-        }
-
-        // 2. Hash the password
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        
-        // 3. Insert new user into the database
-        // FIX: Changed 'password' to 'password_hash' to match your database image
-        const [result] = await pool.query(
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-            [username, email, hashedPassword]
-        );
-
-        res.status(201).json({
-            message: 'User registered successfully',
-            user_id: result.insertId,
-        });
-
-    } catch (error) {
-        console.error('Error during user registration:', error);
-        res.status(500).json({ message: 'Failed to register user', error: error.message });
-    }
+  const { username, email, password } = req.body;
+  if (!username || !email || !password) return res.status(400).json({ message: 'All fields are required.' });
+  try {
+    const existingUser = await pool.query('SELECT user_id FROM users WHERE email = ?', [email]);
+    if (existingUser.length > 0) return res.status(409).json({ message: 'User with this email already exists.' });
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const result = await pool.query('INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)', [username, email, hashedPassword]);
+    res.status(201).json({ message: 'User registered successfully', user_id: result.insertId });
+  } catch (error) {
+    console.error('Error during user registration:', error);
+    res.status(500).json({ message: 'Failed to register user', error: error.message });
+  }
 };
 
-// ===== READ: user (Login/Authentication) =====
-const loginUser = async (req, res) => {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required.' });
+// UPDATE user (excluding password)
+const updateUser = (req, res) => {
+  const id = req.params.id;
+  const { username, email } = req.body;
+  pool.query(
+    'UPDATE users SET username = ?, email = ? WHERE user_id = ?',
+    [username, email, id],
+    (error, result) => {
+      if (error) return res.status(500).json({ error });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
+      res.json({ message: 'User updated successfully' });
     }
-
-    try {
-        // 1. Find user by email
-        // FIX: Changed 'password' to 'password_hash' and used 'AS password' so the rest of the code works
-        const [users] = await pool.query('SELECT user_id, password_hash AS password FROM users WHERE email = ?', [email]);
-        const user = users[0];
-
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials.' }); 
-        }
-
-        // 2. Compare the submitted password with the hashed password
-        const isMatch = await bcrypt.compare(password, user.password);
-
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials.' });
-        }
-
-        // 3. Successful login
-        res.status(200).json({ 
-            message: 'Login successful', 
-            user_id: user.user_id 
-        });
-
-    } catch (error) {
-        console.error('Error during user login:', error);
-        res.status(500).json({ message: 'Internal Server Error' });
-    }
+  );
 };
 
+// DELETE user
+const deleteUser = (req, res) => {
+  const id = req.params.id;
+  pool.query('DELETE FROM users WHERE user_id = ?', [id], (error, result) => {
+    if (error) return res.status(500).json({ error });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: 'User deleted successfully' });
+  });
+};
 
-// ===== CREATE: product =====
+// CREATE product
 const createProduct = (req, res) => {
   const { product_name, category_id, price, quantity } = req.body;
-
-  if (!product_name || !category_id || price == null || quantity == null) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
-
+  if (!product_name || !category_id || price == null || quantity == null) return res.status(400).json({ message: 'All fields are required.' });
   pool.query(
     'INSERT INTO products (product_name, category_id, price, quantity) VALUES (?, ?, ?, ?)',
-    [product_name, category_id, price, quantity]
-  )
-    .then(([result]) =>
-      res.status(201).json({ 
-        message: 'Product created successfully',
-        product_id: result.insertId,
-      })
-    )
-    .catch(error => res.status(500).json({ error }));
+    [product_name, category_id, price, quantity],
+    (error, result) => {
+      if (error) return res.status(500).json({ error });
+      res.status(201).json({ message: 'Product created successfully', product_id: result.insertId });
+    }
+  );
 };
 
-// ===== UPDATE: product =====
+// UPDATE product
 const updateProduct = (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id;
   const { product_name, category_id, price, quantity } = req.body;
-
   pool.query(
     'UPDATE products SET product_name = ?, category_id = ?, price = ?, quantity = ? WHERE product_id = ?',
-    [product_name, category_id, price, quantity, id]
-  )
-    .then(([result]) => {
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'Product not found' });
-      }
+    [product_name, category_id, price, quantity, id],
+    (error, result) => {
+      if (error) return res.status(500).json({ error });
+      if (result.affectedRows === 0) return res.status(404).json({ message: 'Product not found' });
       res.json({ message: 'Product updated successfully' });
-    })
-    .catch(error => res.status(500).json({ error }));
+    }
+  );
 };
 
-// ===== DELETE: product =====
+// DELETE product
 const deleteProduct = (req, res) => {
-  const { id } = req.params;
-
-  pool.query(
-    'DELETE FROM products WHERE product_id = ?',
-    [id]
-  )
-    .then(([result]) => {
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'Product not found' });
-      }
-      res.json({ message: 'Product deleted successfully' });
-    })
-    .catch(error => res.status(500).json({ error }));
+  const id = req.params.id;
+  pool.query('DELETE FROM products WHERE product_id = ?', [id], (error, result) => {
+    if (error) return res.status(500).json({ error });
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Product not found' });
+    res.json({ message: 'Product deleted successfully' });
+  });
 };
 
 module.exports = {
   getCategories,
+  getCategoryById,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   getProducts,
   getProductById,
   getUsers,
-  registerUser, 
-  loginUser, 
+  getUserById,
+  registerUser,
+  updateUser,
+  deleteUser,
   createProduct,
   updateProduct,
-  deleteProduct,
+  deleteProduct
 };
