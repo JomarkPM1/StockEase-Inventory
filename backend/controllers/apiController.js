@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // backend/controllers/apiController.js
 
 const pool = require('../db');
@@ -170,38 +169,11 @@ const deleteProduct = (req, res) => {
       res.json({ message: 'Product deleted successfully' });
     })
     .catch(error => res.status(500).json({ error }));
-=======
-const pool = require('../db');
-
-// Fetch all categories
-const getCategories = (req, res) => {
-  pool.query('SELECT * FROM categories', (error, results) => {
-    if (error) return res.status(500).json({ error });
-    res.json(results);
-  });
-};
-
-// Fetch all products
-const getProducts = (req, res) => {
-  pool.query('SELECT * FROM products', (error, results) => {
-    if (error) return res.status(500).json({ error });
-    res.json(results);
-  });
-};
-
-// Fetch all users (without passwords for security)
-const getUsers = (req, res) => {
-  pool.query('SELECT user_id, username, email, created_at FROM users', (error, results) => {
-    if (error) return res.status(500).json({ error });
-    res.json(results);
-  });
->>>>>>> 6bb454d241aea38e1212c46af7f527310556f3e8
 };
 
 module.exports = {
   getCategories,
   getProducts,
-<<<<<<< HEAD
   getProductById,
   getUsers,
   registerUser, 
@@ -210,7 +182,3 @@ module.exports = {
   updateProduct,
   deleteProduct,
 };
-=======
-  getUsers,
-};
->>>>>>> 6bb454d241aea38e1212c46af7f527310556f3e8
